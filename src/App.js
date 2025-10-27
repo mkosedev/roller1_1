@@ -144,7 +144,7 @@ function App() {
 
       const sortedData = responseData.map((d) => ({
         ...d,
-        values: d.values.sort((a, b) => a.time - b.time),
+        values: d.values.sort((a, b) => new Date(a.time) - new Date(b.time)),
       }));
 
       const filteredData = sortedData.map((d) => {
