@@ -103,7 +103,7 @@ function App() {
 
   const appId = "data-xnlepwl";
   const mongoDBEndpoint =
-    "https://eu-central-1.aws.data.mongodb-api.com/app/data-xnlepwl/endpoint/data/v1/action/";
+    "https://eu-north-1.aws.data.mongodb-api.com/app/data-xnlepwl/endpoint/data/v1/action/";
 
   // MongoDB'ye e-posta ve şifre ile giriş yapma fonksiyonu
   const loginEmailPassword = async (email, password) => {
@@ -144,7 +144,7 @@ function App() {
 
       const sortedData = responseData.map((d) => ({
         ...d,
-        values: d.values.sort((a, b) => new Date(a.time) - new Date(b.time)),
+        values: d.values.sort((a, b) => a.time - b.time),
       }));
 
       const filteredData = sortedData.map((d) => {
