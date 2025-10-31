@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import * as Realm from "realm-web";
 import LineChart from "./components/LineChart";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
@@ -73,13 +72,15 @@ const transformData = (data) => {
 };
 
 function App() {
-  const [user, setUser] = useState(null);
   const [expandedChart, setExpandedChart] = useState(null);
   const [chartData, setChartData] = useState({});
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [dataLimit, setDataLimit] = useState(110); // Varsayılan veri limiti
+  const [dataLimit, setDataLimit] = useState(110);
+
+  // Backend URL — server.js ile aynı portta çalışıyor
+  const mongoDBEndpoint = "http://localhost:3000/data";
 
   const colors = {
     A8: "#ff9f1c",
@@ -101,40 +102,11 @@ function App() {
     SÜRE: "#ccd5ae",
   };
 
-  const appId = "data-xnlepwl";
-  const mongoDBEndpoint =
-    "https://eu-north-1.aws.data.mongodb-api.com/app/data-xnlepwl/endpoint/data/v1/action/";
-
-  // MongoDB'ye e-posta ve şifre ile giriş yapma fonksiyonu
-  const loginEmailPassword = async (email, password) => {
-    const app = new Realm.App({ id: appId });
-    const credentials = Realm.Credentials.emailPassword(email, password);
-    const loggedUser = await app.logIn(credentials);
-    return loggedUser.accessToken;
-  };
-
-  // Veriyi çeken fonksiyonu useCallback ile sarmalıyoruz
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const dataRequest = JSON.stringify({
-        collection: "tempV3",
-        database: "temperature_data",
-        dataSource: "Cluster0",
-      });
-
-      const config = {
-        method: "post",
-        url: `${mongoDBEndpoint}find`,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user}`,
-        },
-        data: dataRequest,
-      };
-
-      const response = await axios(config);
-      const responseData = response.data.documents;
+      const response = await axios.get(mongoDBEndpoint);
+      const responseData = response.data;
 
       if (responseData.length === 0) {
         setChartData({});
@@ -165,7 +137,6 @@ function App() {
           };
         }
 
-        // Veriyi dizinin sonundan alıp her zaman kesin bir sınır koyuyoruz
         const limitedValues = values.slice(
           Math.max(values.length - dataLimit, 0)
         );
@@ -184,36 +155,17 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, startDate, endDate, dataLimit]);
+  }, [startDate, endDate, dataLimit]);
 
   useEffect(() => {
-    const initializeUser = async () => {
-      try {
-        const accessToken = await loginEmailPassword(
-          "hamzakaya4343@gmail.com",
-          "hmzhmzky"
-        );
-        setUser(accessToken);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    initializeUser();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    fetchData(); // İlk veri çekme işlemi
-
+    fetchData();
     const intervalId = setInterval(() => {
       console.log("Interval triggered");
-      fetchData(); // 5 dakikada bir veri güncelleme
-    }, 300000);
+      fetchData();
+    }, 300000); // 5 dakikada bir
 
     return () => clearInterval(intervalId);
-  }, [user, fetchData]);
+  }, [fetchData]);
 
   return (
     <div style={{ padding: "20px" }}>
@@ -265,13 +217,13 @@ function App() {
         </button>
       </div>
 
-      {/* Üst Ortada Tarih ve Butonların Bulunduğu Alan */}
+      {/* Tarih filtreleme ve export */}
       <div
         style={{
           display: "flex",
-          justifyContent: "center", // Ortaya hizalama
-          alignItems: "center", // Dikey ortalama
-          marginBottom: "30px", // Alt boşluk
+          justifyContent: "center",
+          alignItems: "center",
+          marginBottom: "30px",
           flexWrap: "wrap",
         }}
       >
@@ -294,7 +246,10 @@ function App() {
           />
         </label>
         <button
-          onClick={() => setStartDate("") || setEndDate("")}
+          onClick={() => {
+            setStartDate("");
+            setEndDate("");
+          }}
           style={{
             marginLeft: "20px",
             padding: "10px",
@@ -307,7 +262,6 @@ function App() {
         >
           Clear Filter
         </button>
-        {/* Excel'e veri indirme butonu */}
         <button
           onClick={() => exportToExcel(chartData)}
           style={{
@@ -322,7 +276,6 @@ function App() {
         </button>
       </div>
 
-      {/* Diğer içerik */}
       {isLoading ? (
         <div style={{ textAlign: "center", fontSize: "18px" }}>Loading...</div>
       ) : Object.keys(chartData).length === 0 ? (
@@ -347,13 +300,13 @@ function App() {
             key !== "saat" && (
               <LineChart
                 key={key}
-                backgroundColor={colors[key]} // Her grafik için özel arka plan rengi
+                backgroundColor={colors[key]}
                 yAxisData={chartData[key]}
                 leftYAxisName={calculateMinMax(chartData[key])}
                 rightYAxisName={key}
                 xAxisData={chartData.saat}
                 isXAxisShow={key === "GRS BACA"}
-                onClick={() => setExpandedChart(key)} // Tıklandığında ilgili grafiği genişletiyoruz
+                onClick={() => setExpandedChart(key)}
               />
             )
         )

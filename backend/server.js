@@ -296,6 +296,25 @@ function parseHTMLData(html) {
   return parsedData;
 }
 
+// ------------------------------
+// FRONTEND İÇİN VERİ SAĞLAYAN ENDPOINT
+// ------------------------------
+
+app.get("/data", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: "Database not connected yet" });
+    }
+
+    const collection = db.collection("tempV3");
+    const documents = await collection.find({}).toArray();
+
+    res.json(documents);
+  } catch (error) {
+    console.error("Data fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch data" });
+  }
+});
 
 
 
